@@ -161,7 +161,7 @@ def assess_port(money, start_capital, start_date, trades, cash_flow):
     res_df.loc['Return Percentage', start.strftime('%Y-%m-%d')] = final_return / start_capital * 100
     res_df.to_excel(f"crypto_start_from_{start.strftime('%Y-%m-%d')}.xlsx")
 
-    print("Total profit: {:.2f}%".format(total_profit))
+    print("Total profit: {:.2f}%".format(final_return / start_capital * 100))
     print("Profit per trade: {:.2f}%".format(profit_per_trade))
     print("Sharpe ratio: {:.2f}".format(sharpe_ratio))
     print("Number of trades: {}".format(num_trades))
