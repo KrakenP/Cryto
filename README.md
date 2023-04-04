@@ -2,6 +2,12 @@
 Simple cryto trading strategy by using RSI and short term moving average (20days), long term moving average(50days).
 
 ### Start:
+
+#### Trading signals:
+* Buy: rsi < 30 and not holding any underlying and short term ma is larger than long term.
+* Sell: rsi > 70 and holding underlying and short term ma is smaller than long term.
+* Stop loss: loss 2% of the money.
+
 The first strategy is simple use the whole dataset (i.e from the start date to today) to 
 calculate rsi and moving average.
 
