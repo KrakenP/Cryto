@@ -17,8 +17,8 @@ def calculate_sharpe_ratio(profits):
     return sharpe_ratio
 
 
-def sixty_OHLCV(exchange, symbol, timeframe, start_date=None):
-    start_date -= timedelta(days=60)
+def sixty_OHLCV(exchange, symbol, timeframe, start_date, day):
+    start_date -= timedelta(days=day)
     start_timestamp = int(start_date.timestamp() * 1000)
     ohlcv = exchange.fetch_ohlcv(symbol, timeframe, since=start_timestamp, limit=61)
     df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
@@ -38,17 +38,17 @@ def cal_RSI(df, rsi_period=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-def ma_signal(df):
-    short_sma = df['close'].rolling(20).mean()
-    long_sma = df['close'].rolling(50).mean()
+def ma_signal(df,ma_short_period, ma_long_period):
+    short_sma = df['close'].rolling(ma_short_period).mean()
+    long_sma = df['close'].rolling(ma_long_period).mean()
     ret_df = pd.DataFrame(np.where(short_sma > long_sma, 1.0, 0.0), index=df.index, columns=['value'])
     return ret_df
 
 
-def ma_rsi_strategy_sixty_day(past_df, price_df, start_date, end_date, ma_period=20, rsi_period=14, rsi_oversold=30, rsi_overbought=70,
+def ma_rsi_strategy_sixty_day(past_df, price_df, start_date, end_date, ma_short_period=20,ma_long_period=50, rsi_period=14, rsi_oversold=30, rsi_overbought=70,
                               stop_loss_pct=0.02, start_capital=1000):
     # Calculate moving average
-    ma = ma_signal(past_df)
+    ma = ma_signal(past_df, ma_short_period, ma_long_period)
     # Calculate RSI
     rsi = cal_RSI(past_df, rsi_period)
 
@@ -120,9 +120,9 @@ def ma_rsi_strategy_sixty_day(past_df, price_df, start_date, end_date, ma_period
             position = 0
 
         curr_date = curr_date + timedelta(days=1)
-        df = sixty_OHLCV(exchange, symbol, timeframe, curr_date)
+        df = price_df.loc[(curr_date - timedelta(days=60)):curr_date]
         rsi = cal_RSI(df, rsi_period)
-        ma = ma_signal(df)
+        ma = ma_signal(df, ma_short_period, ma_long_period)
         if len(trades) != 0:
             cahs_flow.append(money+balance)
 
@@ -202,8 +202,8 @@ def plot_cashflow(df, cash_flow):
     return fig
 
 if __name__=='__main__':
-    api_key = 'input your api_key'
-    api_se = 'input your secrete'
+    api_key = 'Your api Key'
+    api_se = 'Your secrete'
 
     # Connect to Binance API
     exchange = ccxt.binance({
@@ -222,13 +222,15 @@ if __name__=='__main__':
     stop_loss_pct = 0.05  # 5%
     start_capital = 1000
 
-    s_sixty = datetime.strptime('2022-01-01', '%Y-%m-%d')
+    s_sixty = datetime.strptime('2023-01-01', '%Y-%m-%d')
     e_sixty = datetime.today()
 
-    past_df = sixty_OHLCV(exchange, symbol, timeframe, start_date=s_sixty)
+    past_df = sixty_OHLCV(exchange, symbol, timeframe, start_date=s_sixty, day=60)
+
     price_df = get_OHLCV.OHLCV(exchange, symbol, timeframe, start_date=s_sixty)
 
-    trades, cash_flow = ma_rsi_strategy_sixty_day(past_df, price_df, s_sixty, e_sixty)
+
+    trades, cash_flow = ma_rsi_strategy_sixty_day(past_df, price_df, s_sixty, e_sixty, start_capital=start_capital)
 
     res_df = assess_port(cash_flow[-1], start_capital, s_sixty, trades, cash_flow)
     res_df.to_excel(f"start from {s_sixty.date()}_sixty.xlsx")
